@@ -157,6 +157,7 @@ public class DBWorkload {
       wrkld.setIsolationMode(xmlConfig.getString("isolation" + pluginTest, isolationMode));
       wrkld.setScaleFactor(xmlConfig.getDouble("scalefactor", 1.0));
       wrkld.setCrossRatio(xmlConfig.getInt("crossratio", 0));
+      wrkld.setMySkewFactor(xmlConfig.getInt("myskewfactor", 0));
       wrkld.setKeysPerRegion(xmlConfig.getInt("keysperregion", 1000));
       wrkld.setYCSBkeys(xmlConfig.getInt("ycsbkeys", 10));
       wrkld.setDataDir(xmlConfig.getString("datadir", "."));

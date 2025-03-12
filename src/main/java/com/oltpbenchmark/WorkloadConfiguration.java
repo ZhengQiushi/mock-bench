@@ -38,6 +38,7 @@ public class WorkloadConfiguration {
   private double scaleFactor = 1.0;
   private int ycsbkeys = 10;
   private int crossRatio = 0;
+  private int mySkewFactor = 0;
   private int keysPerRegion = 1000;
   private double selectivity = -1.0;
   private int terminals;
@@ -258,6 +259,10 @@ public class WorkloadConfiguration {
     return this.crossRatio;
   }
 
+  public int getMySkewFactor() {
+    return this.mySkewFactor;
+  }
+
   public int getKeysPerRegion() {
     return this.keysPerRegion;
   }
@@ -277,6 +282,10 @@ public class WorkloadConfiguration {
 
   public void setCrossRatio(int crossRatio) {
     this.crossRatio = crossRatio;
+  }
+
+  public void setMySkewFactor(int mySkewFactor) {
+    this.mySkewFactor = mySkewFactor;
   }
 
   public void setKeysPerRegion(int keysPerRegion) {
@@ -427,6 +436,8 @@ public class WorkloadConfiguration {
         + scaleFactor
         + ", crossRatio="
         + crossRatio
+        + ", mySkewFactor="
+        + mySkewFactor
         + ", keysPerRegion="
         + keysPerRegion
         + ", ycsbKeys="

@@ -32,7 +32,7 @@ import com.oltpbenchmark.util.TextGenerator;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
-
+import java.util.Random;
 /**
  * YCSBWorker Implementation I forget who really wrote this but I fixed it up in 2016...
  *
@@ -49,6 +49,8 @@ class YCSBWorker extends Worker<YCSBBenchmark> {
   private final int totalRows;
   private final String[] params = new String[YCSBConstants.NUM_FIELDS];
   private final String[] results = new String[YCSBConstants.NUM_FIELDS];
+  private final Random random;
+  private final int totalStores;
 
   private final UpdateRecord procUpdateRecord;
   private final ScanRecord procScanRecord;
@@ -67,6 +69,8 @@ class YCSBWorker extends Worker<YCSBBenchmark> {
         new ZipfianGenerator(
             rng(), init_record_count, benchmarkModule.skewFactor); // pool for read keys
     this.randScan = new UniformGenerator(1, YCSBConstants.MAX_SCAN);
+    this.random = new Random();
+    this.totalStores = 5;
 
     synchronized (YCSBWorker.class) {
       // We must know where to start inserting
@@ -132,7 +136,9 @@ class YCSBWorker extends Worker<YCSBBenchmark> {
     this.buildParameters();
     this.procReadModifyWriteRecord.run(conn, keyname, this.params, this.results);
   }
-
+  private int myGetNextInt() {
+    return Math.abs(random.nextInt()) % this.totalRows;
+  }
   private void myUpdateRecord(Connection conn) throws SQLException {
     final int NUM_KEYS = this.configuration.getYCSBkeys();
     int[] keys = new int[NUM_KEYS + 1];
@@ -140,16 +146,28 @@ class YCSBWorker extends Worker<YCSBBenchmark> {
 
     int totalRegions = this.totalRows / this.configuration.getKeysPerRegion();
 
-    int randomNumber = readRecord.nextInt();
+    int randomNumber = myGetNextInt();
     boolean isCrossRegion = randomNumber % 100 < this.configuration.getCrossRatio();
 
     int baseRegionId = (randomNumber / this.configuration.getKeysPerRegion()) / NUM_KEYS * NUM_KEYS; // begin 
-    int baseRegionIdOffset = readRecord.nextInt() % NUM_KEYS;
 
-    int baseKeyOffset = readRecord.nextInt() % this.configuration.getKeysPerRegion() / NUM_KEYS * NUM_KEYS;
+    int val = myGetNextInt();
+    int baseRegionIdOffset = val % NUM_KEYS;
+
+    // System.out.println("val: " + val % 100 + " " + 
+    //                    "skew factor: " + this.configuration.getMySkewFactor());
+    int idx = (baseRegionId / NUM_KEYS) % NUM_KEYS;
+
+    boolean isSkew = val % 100 < this.configuration.getMySkewFactor();
+    if(isSkew){
+      // getMySkewFactor = 80 代表百分之80的负载落在某一个节点上
+      baseRegionIdOffset = idx = 0;
+    }
+
+    int baseKeyOffset = myGetNextInt() % this.configuration.getKeysPerRegion() / NUM_KEYS * NUM_KEYS;
     int baseKey = (baseRegionId + baseRegionIdOffset) * this.configuration.getKeysPerRegion() + baseKeyOffset;
 
-    int idx = (baseRegionId / NUM_KEYS) % NUM_KEYS;
+    
     // Generate keys and update flags
     for (int i = 0; i < NUM_KEYS + 1; i++) {
         if(isCrossRegion == true){
@@ -157,6 +175,10 @@ class YCSBWorker extends Worker<YCSBBenchmark> {
             keys[i] = (baseKey + i + (idx - baseRegionIdOffset) * this.configuration.getKeysPerRegion()) % totalRows;
           } else {
             keys[i] = (baseKey + i + (i - baseRegionIdOffset) * this.configuration.getKeysPerRegion()) % totalRows;
+            if(i >= 2 && isSkew){
+              // getMySkewFactor = 80 代表百分之80的负载落在某一个节点上
+              keys[i] = (baseKey + i) % totalRows;
+            }
           }
         } else {
           keys[i] = baseKey + i;
